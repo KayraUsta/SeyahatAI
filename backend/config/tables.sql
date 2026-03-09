@@ -1,0 +1,87 @@
+-- Users Table
+CREATE TABLE IF NOT EXISTS Users (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    name NVARCHAR(100) NOT NULL,
+    email NVARCHAR(255) NOT NULL UNIQUE,
+    password NVARCHAR(255) NOT NULL,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    updatedAt DATETIME2 DEFAULT GETDATE()
+);
+
+-- Plans Table
+CREATE TABLE IF NOT EXISTS Plans (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    userId NVARCHAR(36) NOT NULL,
+    title NVARCHAR(255) NOT NULL,
+    query NVARCHAR(MAX) NOT NULL,
+    plan NVARCHAR(MAX) NOT NULL,
+    isFavorite BIT DEFAULT 0,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    updatedAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
+);
+
+-- Budgets Table
+CREATE TABLE IF NOT EXISTS Budgets (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    userId NVARCHAR(36) NOT NULL,
+    travelName NVARCHAR(255) NOT NULL,
+    totalBudget DECIMAL(18,2) NOT NULL,
+    currency NVARCHAR(3) DEFAULT 'TRY',
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    updatedAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
+);
+
+-- Expenses Table
+CREATE TABLE IF NOT EXISTS Expenses (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    budgetId NVARCHAR(36) NOT NULL,
+    description NVARCHAR(255) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    category NVARCHAR(50) DEFAULT 'Diğer',
+    date DATETIME2 DEFAULT GETDATE(),
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (budgetId) REFERENCES Budgets(id) ON DELETE CASCADE
+);
+
+-- TodoLists Table
+CREATE TABLE IF NOT EXISTS TodoLists (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    userId NVARCHAR(36) NOT NULL,
+    travelName NVARCHAR(255) NOT NULL,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    updatedAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
+);
+
+-- TodoItems Table
+CREATE TABLE IF NOT EXISTS TodoItems (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    listId NVARCHAR(36) NOT NULL,
+    text NVARCHAR(500) NOT NULL,
+    completed BIT DEFAULT 0,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (listId) REFERENCES TodoLists(id) ON DELETE CASCADE
+);
+
+-- PasswordResets Table
+CREATE TABLE IF NOT EXISTS PasswordResets (
+    id NVARCHAR(36) PRIMARY KEY DEFAULT NEWID(),
+    userId NVARCHAR(36) NOT NULL,
+    email NVARCHAR(255) NOT NULL,
+    resetToken NVARCHAR(6) NOT NULL,
+    expiresAt DATETIME2 NOT NULL,
+    used BIT DEFAULT 0,
+    createdAt DATETIME2 DEFAULT GETDATE(),
+    FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS IX_Plans_UserId ON Plans(userId);
+CREATE INDEX IF NOT EXISTS IX_Budgets_UserId ON Budgets(userId);
+CREATE INDEX IF NOT EXISTS IX_Expenses_BudgetId ON Expenses(budgetId);
+CREATE INDEX IF NOT EXISTS IX_TodoLists_UserId ON TodoLists(userId);
+CREATE INDEX IF NOT EXISTS IX_TodoItems_ListId ON TodoItems(listId);
+CREATE INDEX IF NOT EXISTS IX_PasswordResets_Email ON PasswordResets(email);
+CREATE INDEX IF NOT EXISTS IX_PasswordResets_Token ON PasswordResets(resetToken);

@@ -1,0 +1,19 @@
+# ✍️ Kişisel Blog Sitesi (Vue)
+
+Bu proje, Vue.js kullanılarak geliştirilmiş, kişisel blog sitesi versiyonudur.  
+Yazılar, projeler ve kişisel paylaşımlar için modern, hızlı ve responsive bir platform sunar.
+
+---
+
+## ⚙️ Özellikler
+- 📱 Responsive tasarım  
+- ⚡ Hızlı sayfa geçişleri (SPA)  
+- 🔗 Proje ve bağlantı sayfaları  
+- 🎨 Temiz ve sade arayüz
+
+---
+
+## 📥 Kurulum
+```bash
+npm install
+npm run dev

@@ -1,0 +1,2635 @@
+﻿<template>
+<q-page class="q-pa-xl bg-travel text-white">
+
+<!-- Hero Section -->
+<div class="column items-center text-center q-mb-xxl hero-section">
+  <div class="hero-icon-wrapper q-mb-lg">
+    <div class="floating-icons">
+      <q-icon name="flight" size="100px" class="text-primary glow-effect rotating-icon" />
+      <q-icon name="luggage" size="40px" class="floating-icon-1 text-accent" />
+      <q-icon name="explore" size="35px" class="floating-icon-2 text-secondary" />
+      <q-icon name="map" size="30px" class="floating-icon-3 text-info" />
+    </div>
+  </div>
+      ✈️ YOLA ÇIK - AI SEYAHAT PLANLAYICI
+  
+   Yapay zeka ile dünyayı keşfet
+  <div class="feature-badges q-mt-lg">
+    <q-badge class="feature-badge" color="primary" outline>
+      <q-icon name="auto_awesome" size="18px" class="q-mr-xs" />
+      Akıllı Planlama
+    </q-badge>
+    <q-badge class="feature-badge" color="accent" outline>
+      <q-icon name="schedule" size="18px" class="q-mr-xs" />
+      Hızlı Sonuç
+    </q-badge>
+    <q-badge class="feature-badge" color="secondary" outline>
+      <q-icon name="verified" size="18px" class="q-mr-xs" />
+      Güvenilir
+    </q-badge>
+  </div>
+
+  <!-- GiriY / Kayıt Butonları -->
+  <div v-if="!isLoggedIn" class="auth-buttons-wrapper q-mt-lg">
+    <q-btn 
+      label="Giris Yap" 
+      color="primary" 
+      @click="openLogin"
+      icon="login"
+      class="auth-btn"
+      unelevated
+    />
+    <q-btn 
+      label="Kayıt Ol" 
+      color="accent" 
+      @click="openRegister"
+      icon="person_add"
+      class="auth-btn"
+      unelevated
+    />
+  </div>
+  <div v-else class="user-info-wrapper q-mt-lg">
+    <q-chip color="primary" text-color="white" icon="account_circle" class="user-chip">
+      HoY geldin, {{ userName }}!
+    </q-chip>
+    <q-btn 
+      label="Planlarım" 
+      color="accent" 
+      @click="showMyPlans"
+      icon="bookmark"
+      class="auth-btn"
+      outline
+      unelevated
+    />
+    <q-btn 
+      label="?ıkıY" 
+      color="grey-7" 
+      @click="logout"
+      icon="logout"
+      class="auth-btn"
+      outline
+      unelevated
+    />
+  </div>
+
+</div>
+
+    <!-- Search Section -->
+    <div class="row justify-center q-mb-xl">
+      <div class="col-12 col-md-10 col-lg-8">
+        <q-card class="search-card q-pa-xl glass-effect-enhanced" dark>
+          <q-card-section class="q-pa-none">
+            <div class="search-header q-mb-md">
+              <q-icon name="travel_explore" size="32px" class="text-accent q-mr-sm" />
+              <span class="text-h6 text-weight-bold">Seyahat Planını Olustur</span>
+            </div>
+            
+            <q-input
+              v-model="queryText"
+              outlined
+              dark
+              label="Hayalindeki seyahat neresi?"
+              placeholder="-rn: Tokyo'da 5 günlük macera, Paris'te romantik bir haftasonu, Bali'de yoga tatili..."
+              class="q-mb-lg custom-input-enhanced"
+              :disable="isLoading"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" color="accent" class="pulse-icon" />
+               </template>
+              <template v-slot:append>
+                <q-icon name="explore" color="secondary" />
+              </template>
+            </q-input>
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-md-8">
+                <q-btn
+                  label="SEYAHAT PLANI OLUŞTUR"
+                  color="accent"
+                  icon-right="flight_takeoff"
+                  :loading="isLoading"
+                  @click="getTravelPlan"
+                  class="full-width action-button-enhanced"
+                  size="lg"
+                  :disable="!queryText.trim()"
+                  unelevated
+                >
+                  <template v-slot:loading>
+                    <q-spinner-orbit class="on-left" color="white" size="24px" />
+                    Planınız Hazırlanıyor...
+                  </template>
+                </q-btn>
+              </div>
+              <div class="col-12 col-md-4">
+                <q-btn
+                  label="Kararsız Kaldım"
+                  color="primary"
+                  outline
+                  icon="help_outline"
+                  @click="openIndecisive"
+                  class="full-width"
+                  size="lg"
+                  unelevated
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Result Section -->
+    <transition
+      enter-active-class="animated zoomIn"
+      leave-active-class="animated zoomOut"
+      mode="out-in"
+      duration="300"
+    >
+      <div v-if="responseText" class="row justify-center">
+        <div class="col-12 col-md-11 col-lg-10">
+          <q-card class="result-card q-pa-xl glass-effect-enhanced" dark>
+            <q-card-section class="q-pa-none">
+              <div class="result-header q-mb-lg">
+                <div class="row items-center q-mb-md">
+                  <div class="result-icon-wrapper q-mr-md">
+                    <q-icon name="travel_explore" color="accent" size="48px" class="glow-effect" />
+                  </div>
+                  <div>
+                    <div class="text-h4 text-weight-bold travel-gradient">o^️ SEYAHAT PLANIN HAZIR!</div>
+                    <div class="text-subtitle1 text-grey-4">Harika bir yolculuk seni bekliyor</div>
+                  </div>
+                </div>
+                
+                <div class="action-buttons-wrapper">
+                  <q-btn 
+                    label="Yeni Plan" 
+                    color="grey-7" 
+                    outline 
+                    @click="clearResults"
+                    icon="add_circle_outline"
+                    class="action-btn-modern"
+                    unelevated
+                  />
+                  <q-btn 
+                    label="PaylaY" 
+                    color="primary" 
+                    @click="sharePlan"
+                    icon="share"
+                    class="action-btn-modern"
+                    unelevated
+                  />
+                  <q-btn 
+                    label="Kaydet" 
+                    color="accent" 
+                    icon="bookmark"
+                    class="action-btn-modern"
+                    @click="saveTravelPlan"
+                    unelevated
+                  />
+                </div>
+              </div>
+
+              <q-separator color="accent" class="q-mb-xl separator-glow" />
+
+              <div class="travel-content q-pa-md scroll-design-enhanced">
+                <div v-html="formattedResponse" class="text-body1 line-height-2 content-text-enhanced"></div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </transition>
+
+   
+    <!-- Loading Dialog -->
+    <q-dialog v-model="isLoading" persistent seamless>
+      <q-card class="loading-card glass-effect-enhanced" dark>
+        <q-card-section class="column items-center q-pa-xl">
+          <div class="plane-container-enhanced q-mb-lg">
+            <q-icon name="flight" size="90px" class="text-accent flying-plane-enhanced" />
+            <q-icon name="cloud" size="40px" class="cloud-1 text-grey-6" />
+            <q-icon name="cloud" size="35px" class="cloud-2 text-grey-7" />
+            <q-icon name="cloud" size="30px" class="cloud-3 text-grey-6" />
+          </div>
+          <div class="text-h4 text-weight-bold travel-gradient q-mb-md">o^️ Seyahat Planı Hazırlanıyor</div>
+          <div class="text-h6 text-grey-3 text-center q-mb-md">
+            gY- AI, sizin için özel seyahat rotanızı çiziyor...
+          </div>
+          <div class="loading-steps text-center q-mb-lg">
+            <div class="text-caption text-grey-4">gY" Destinasyon analiz ediliyor</div>
+            <div class="text-caption text-grey-4">gY" Rotalar belirleniyor</div>
+            <div class="text-caption text-grey-4">gY -neriler hazırlanıyor</div>
+          </div>
+          <q-linear-progress 
+            dark 
+            rounded 
+            size="12px" 
+            color="accent" 
+            class="q-mt-md full-width progress-glow"
+            indeterminate 
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Login Dialog -->
+    <q-dialog v-model="loginDialog" persistent>
+      <q-card class="auth-modal login-modal glass-effect-enhanced" dark style="min-width: 400px">
+        <q-card-section class="q-pa-xl">
+          <div class="text-center q-mb-lg">
+            <q-icon name="login" size="64px" class="text-primary glow-effect" />
+            <h2 class="text-h4 text-weight-bold travel-gradient q-mt-md q-mb-xs">GiriY Yap</h2>
+            <p class="text-grey-4">Seyahat planlarına eriYmek için giriY yapın</p>
+          </div>
+
+          <q-input
+            v-model="loginEmail"
+            outlined
+            dark
+            label="Email"
+            type="email"
+            class="q-mb-md custom-input-enhanced"
+            :rules="[val => !!val || 'Email gereklidir']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="email" color="primary" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="loginPassword"
+            outlined
+            dark
+            label="Şifre"
+            :type="showLoginPassword ? 'text' : 'password'"
+            class="q-mb-lg custom-input-enhanced"
+            :rules="[val => !!val || 'Şifre gereklidir']"
+            @keyup.enter="handleLogin"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" color="primary" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                :name="showLoginPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="showLoginPassword = !showLoginPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-btn
+            label="GiriY Yap"
+            color="primary"
+            icon-right="arrow_forward"
+            :loading="authLoading"
+            @click="handleLogin"
+            class="full-width action-button-enhanced q-mb-md"
+            size="lg"
+            unelevated
+          />
+        </q-card-section>
+
+        <q-card-actions class="q-pa-md q-gutter-sm">
+          <q-btn
+            label="Favorilerim"
+            icon="favorite"
+            color="red"
+            @click="showFavorites = !showFavorites"
+            :outline="!showFavorites"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <q-dialog v-model="registerDialog" persistent>
+      <q-card class="auth-modal register-modal glass-effect-enhanced" dark style="min-width: 400px">
+        <q-card-section class="q-pa-xl">
+          <div class="text-center q-mb-lg">
+            <q-icon name="person_add" size="64px" class="text-accent glow-effect" />
+            <h2 class="text-h4 text-weight-bold travel-gradient q-mt-md q-mb-xs">Kayıt Ol</h2>
+            <p class="text-grey-4">Seyahat planlarını kaydetmek için üye ol</p>
+          </div>
+
+          <q-input
+            v-model="registerName"
+            outlined
+            dark
+            label="Ad Soyad"
+            class="q-mb-md custom-input-enhanced"
+            :rules="[val => !!val || 'İsim gereklidir']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="person" color="accent" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="registerEmail"
+            outlined
+            dark
+            label="Email"
+            type="email"
+            class="q-mb-md custom-input-enhanced"
+            :rules="[val => !!val || 'Email gereklidir']"
+          >
+            <template v-slot:prepend>
+              <q-icon name="email" color="accent" />
+            </template>
+          </q-input>
+
+          <q-input
+            v-model="registerPassword"
+            outlined
+            dark
+            label="Şifre (min 6 karakter)"
+            :type="showRegisterPassword ? 'text' : 'password'"
+            class="q-mb-lg custom-input-enhanced"
+            :rules="[val => !!val || 'Şifre gereklidir', val => val.length >= 6 || 'En az 6 karakter olmalı']"
+            @keyup.enter="handleRegister"
+          >
+            <template v-slot:prepend>
+              <q-icon name="lock" color="accent" />
+            </template>
+            <template v-slot:append>
+              <q-icon
+                :name="showRegisterPassword ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="showRegisterPassword = !showRegisterPassword"
+              />
+            </template>
+          </q-input>
+
+          <q-btn
+            label="Kayıt Ol"
+            color="accent"
+            icon-right="arrow_forward"
+            :loading="authLoading"
+            @click="handleRegister"
+            class="full-width action-button-enhanced q-mb-md"
+            size="lg"
+            unelevated
+          />
+
+          <div class="text-center">
+            <q-btn
+              label="Zaten hesabın var mı? GiriY Yap"
+              flat
+              color="primary"
+              @click="openLogin"
+              class="switch-auth-btn"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn label="Kapat" flat color="grey-5" @click="registerDialog = false" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- My Plans Dialog - İyileYtirilmiY -->
+    <q-dialog v-model="myPlansDialog" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-travel" dark>
+        <q-bar class="plans-header-enhanced">
+          <q-icon name="bookmark" size="28px" class="glow-effect" />
+          <div class="text-h5 text-weight-bold q-ml-sm">o^️ Seyahat Planlarım</div>
+          <q-space />
+          <q-chip :label="`${savedPlans.length} Plan`" color="accent" text-color="white" icon="list" />
+          <q-btn dense flat icon="close" @click="myPlansDialog = false" size="md" />
+        </q-bar>
+
+        <q-card-section class="q-pa-xl">
+          <!-- Loading State -->
+          <div v-if="loadingPlans" class="loading-state-enhanced">
+            <div class="plane-animation-wrapper">
+              <q-icon name="flight" size="80px" class="text-accent flying-plane-enhanced" />
+              <q-icon name="cloud" size="40px" class="cloud-float-1 text-grey-6" />
+              <q-icon name="cloud" size="35px" class="cloud-float-2 text-grey-7" />
+            </div>
+            <div class="text-h5 text-weight-bold q-mt-xl travel-gradient">Planlarınız yükleniyor...</div>
+            <q-linear-progress indeterminate color="accent" class="q-mt-md progress-glow" style="width: 300px; margin: 0 auto;" />
+          </div>
+
+          <!-- Empty State -->
+          <div v-else-if="savedPlans.length === 0" class="empty-state-enhanced">
+            <div class="empty-icon-container">
+              <q-icon name="travel_explore" size="150px" class="text-grey-6 float-animation" />
+              <q-icon name="flight_takeoff" size="60px" class="text-accent small-float-animation" />
+            </div>
+            <div class="text-h4 text-weight-bold q-mt-xl travel-gradient">Henüz Plan Yok</div>
+            <div class="text-h6 text-grey-4 q-mt-md">İlk seyahat planını oluştur ve maceraya baYla!</div>
+            <q-btn
+              label="Plan OluYtur"
+              color="accent"
+              icon="add_circle"
+              size="lg"
+              class="q-mt-xl action-button-enhanced"
+              @click="myPlansDialog = false"
+              unelevated
+            />
+          </div>
+
+          <!-- Plans Grid -->
+          <div v-else class="row q-col-gutter-lg">
+            <div
+              v-for="(plan, index) in savedPlans"
+              :key="plan._id"
+              class="col-12 col-md-6 col-lg-4 plan-card-wrapper"
+              :style="{ animationDelay: `${index * 0.1}s` }"
+            >
+              <q-card class="plan-card-modern" dark>
+                <!-- Favorite Badge -->
+                <div v-if="plan.isFavorite" class="favorite-star-badge">
+                  <q-icon name="star" size="20px" color="yellow" />
+                </div>
+
+                <q-card-section class="plan-card-top">
+                  <div class="row items-start justify-between">
+                    <div class="col-10">
+                      <div class="plan-title-modern">
+                        o^️ {{ plan.title }}
+                      </div>
+                      <div class="plan-date-modern">
+                        <q-icon name="schedule" size="14px" />
+                        {{ formatDate(plan.createdAt) }}
+                      </div>
+                    </div>
+                    <q-btn
+                      :icon="plan.isFavorite ? 'favorite' : 'favorite_border'"
+                      :color="plan.isFavorite ? 'red' : 'grey-5'"
+                      flat
+                      round
+                      dense
+                      @click="toggleFavorite(plan._id)"
+                      class="favorite-btn-modern"
+                    >
+                      <q-tooltip>{{ plan.isFavorite ? 'Favorilerden ?ıkar' : 'Favorilere Ekle' }}</q-tooltip>
+                    </q-btn>
+                  </div>
+                </q-card-section>
+
+                <q-separator dark />
+
+                <q-card-section class="plan-card-middle">
+                  <div class="plan-query-modern">
+                    <q-icon name="location_on" size="16px" class="q-mr-xs text-accent" />
+                    {{ plan.query }}
+                  </div>
+                </q-card-section>
+
+                <q-separator dark />
+
+                <q-card-actions class="plan-card-bottom">
+                  <q-btn
+                    flat
+                    color="primary"
+                    icon="visibility"
+                    label="Görüntüle"
+                    @click="viewPlan(plan)"
+                    class="plan-action-btn"
+                  />
+                  <q-space />
+                  <q-btn
+                    flat
+                    color="negative"
+                    icon="delete"
+                    @click="deletePlan(plan._id)"
+                    class="plan-action-btn"
+                  >
+                    <q-tooltip>Planı Sil</q-tooltip>
+                  </q-btn>
+                </q-card-actions>
+
+                <!-- Hover Glow -->
+                <div class="card-glow-overlay"></div>
+              </q-card>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- View Plan Dialog -->
+    <q-dialog v-model="viewPlanDialog">
+      <q-card class="glass-effect-enhanced" dark style="min-width: 600px; max-width: 900px">
+        <q-card-section class="q-pa-xl">
+          <div class="text-h4 text-weight-bold travel-gradient q-mb-md">
+            {{ selectedPlan?.title }}
+          </div>
+          <div class="text-caption text-grey-4 q-mb-lg">
+            {{ formatDate(selectedPlan?.createdAt) }}
+          </div>
+          <q-separator class="q-mb-lg" />
+          <div class="travel-content scroll-design-enhanced" style="max-height: 60vh">
+            <div v-html="formatPlanContent(selectedPlan?.plan)" class="text-body1 line-height-2 content-text-enhanced"></div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn label="Kapat" flat color="grey-5" @click="viewPlanDialog = false" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Kararsız Kaldım Dialog (Sabit Planlar) -->
+    <q-dialog v-model="indecisiveDialog" persistent>
+      <q-card class="glass-effect-enhanced indecisive-dialog-card" dark style="min-width: 720px; max-width: 1100px">
+        <q-bar>
+          <q-icon name="psychology" />
+          <div class="text-subtitle1 q-ml-sm">Kararsız Kaldım</div>
+          <q-space />
+          <q-btn dense flat icon="close" v-close-popup @click="indecisiveDialog = false" />
+        </q-bar>
+
+        <q-separator dark />
+
+        <q-card-section class="q-gutter-lg">
+          <div class="text-subtitle1 text-grey-3 q-mb-sm">Bölge Seç</div>
+          <div class="row items-center q-gutter-sm q-mb-md">
+            <q-btn size="lg" :color="predefActive === 'TR' ? 'accent' : 'grey-7'" :outline="predefActive !== 'TR'" label="Türkiye" @click="predefActive = 'TR'" unelevated class="region-select-btn" />
+            <q-btn size="lg" :color="predefActive === 'INTL' ? 'accent' : 'grey-7'" :outline="predefActive !== 'INTL'" label="Yurt Dışı" @click="predefActive = 'INTL'" unelevated class="region-select-btn" />
+            <q-space />
+            <q-btn color="secondary" icon="casino" label="Şans Çarkı" @click="openSpinDialog" :disable="isSpinning" unelevated class="spin-wheel-btn" />
+          </div>
+
+          <div v-show="predefActive === 'TR'">
+            <div class="text-h6 q-mb-sm">Türkiye İçin En Çok Tercih Edilen 5 Seyahat Planı</div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-6" v-for="(plan, i) in predefPlans.tr" :key="'tr-'+i">
+                <q-card flat bordered class="glass-effect-enhanced indecisive-plan-card">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle1 text-weight-bold">{{ plan.title }}</div>
+                    <div class="text-caption text-grey-5 q-mt-xs">
+                      <q-icon name="route" size="16px" class="q-mr-xs" /> Rota: {{ plan.route }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="event" size="16px" class="q-mr-xs" /> Süre: {{ plan.duration }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="sell" size="16px" class="q-mr-xs" /> Temalar: {{ plan.themes }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="thumb_up" size="16px" class="q-mr-xs" /> Avantaj: {{ plan.advantage }}
+                    </div>
+                  </q-card-section>
+                  <q-card-actions align="right">
+                    <q-btn color="accent" label="Detay" @click="showPredefDetail(plan)" class="full-width detail-btn" unelevated />
+                  </q-card-actions>
+                </q-card>
+              </div>
+            </div>
+          </div>
+
+          <div v-show="predefActive === 'INTL'">
+            <div class="text-h6 q-mb-sm">Yurt Dışı İçin En Çok Tercih Edilen 5 Seyahat Planı</div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-6" v-for="(plan, i) in predefPlans.intl" :key="'intl-'+i">
+                <q-card flat bordered class="glass-effect-enhanced indecisive-plan-card">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle1 text-weight-bold">{{ plan.title }}</div>
+                    <div class="text-caption text-grey-5 q-mt-xs">
+                      <q-icon name="route" size="16px" class="q-mr-xs" /> Rota: {{ plan.route }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="event" size="16px" class="q-mr-xs" /> Süre: {{ plan.duration }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="sell" size="16px" class="q-mr-xs" /> Temalar: {{ plan.themes }}
+                    </div>
+                    <div class="text-caption text-grey-5">
+                      <q-icon name="thumb_up" size="16px" class="q-mr-xs" /> Avantaj: {{ plan.advantage }}
+                    </div>
+                  </q-card-section>
+                  <q-card-actions align="right">
+                    <q-btn color="accent" label="Detay" @click="showPredefDetail(plan)" class="full-width detail-btn" unelevated />
+                  </q-card-actions>
+                </q-card>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- ?ark Dialog -->
+    <q-dialog v-model="spinDialog">
+      <q-card class="glass-effect-enhanced wheel-dialog-card" dark style="min-width: 480px; max-width: 700px">
+        <q-bar>
+          <q-icon name="settings" />
+          <div class="text-subtitle1 q-ml-sm">Seyahat ?arkı</div>
+          <q-space />
+          <q-btn dense flat icon="close" v-close-popup :disable="isSpinning" />
+        </q-bar>
+        <q-separator dark />
+        <q-card-section>
+          <div class="row items-center q-gutter-sm q-mb-md">
+            <div class="text-caption text-grey-4 q-mr-sm">Bölge</div>
+            <q-btn :color="spinRegion === 'TR' ? 'accent' : 'grey-7'" :outline="spinRegion !== 'TR'" label="Türkiye" @click="spinRegion = 'TR'" :disable="isSpinning" />
+            <q-btn :color="spinRegion === 'INTL' ? 'accent' : 'grey-7'" :outline="spinRegion !== 'INTL'" label="Yurt Dışı" @click="spinRegion = 'INTL'" :disable="isSpinning" />
+            <q-btn :color="spinRegion === 'MIX' ? 'accent' : 'grey-7'" :outline="spinRegion !== 'MIX'" label="Karışık" @click="spinRegion = 'MIX'" :disable="isSpinning" />
+          </div>
+
+          <div class="column items-center q-my-md">
+            <div class="text-caption text-grey-5 q-mb-sm">Çarkta bulunanlar ({{ wheelItems.length }})</div>
+            <div class="wheel-box">
+              <div class="wheel-visual" :class="{ spinning: isSpinning }"></div>
+              <div class="wheel-pointer"></div>
+              <div class="wheel-labels" :class="{ spinning: isSpinning }">
+                <span
+                  v-for="(item, idx) in wheelItems"
+                  :key="idx"
+                  class="wheel-label"
+                  :style="sliceStyle(idx, wheelItems.length)"
+                >{{ item.title }}</span>
+              </div>
+            </div>
+            <div class="text-caption text-grey-5 q-mt-sm" v-if="!selectedResultTitle">Rastgele bir plan seçilecek</div>
+            <div class="wheel-result q-mt-sm" v-else>
+              <div class="text-subtitle1 travel-gradient">Sonuç</div>
+              <div class="text-body1 q-mt-xs">{{ selectedResultTitle }}</div>
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat color="grey-5" label="Kapat" v-close-popup :disable="isSpinning" />
+          <q-btn color="accent" label="Çevir" @click="spinWheel" :loading="isSpinning" :disable="wheelItems.length === 0" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Kararsız Kaldım Detay Dialog -->
+    <q-dialog v-model="predefDetailDialog">
+      <q-card class="glass-effect-enhanced predef-detail-dialog-card" dark style="min-width: 720px; max-width: 1100px">
+        <q-card-section class="q-pa-lg">
+          <div class="row items-center justify-between q-mb-md">
+            <div>
+              <div class="text-h5 text-weight-bold travel-gradient">{{ predefSelectedPlan?.title }}</div>
+              <div class="row q-gutter-xs q-mt-sm">
+                <q-chip size="md" color="accent" text-color="white" outline icon="event" class="region-chip">{{ predefSelectedPlan?.duration }}</q-chip>
+                <q-chip size="md" color="secondary" text-color="white" outline icon="public" class="region-chip">{{ predefSelectedPlan?.region === 'TR' ? 'Türkiye' : 'Yurt DıYı' }}</q-chip>
+              </div>
+            </div>
+            <q-btn dense flat icon="close" v-close-popup />
+          </div>
+
+          <q-separator dark class="q-mb-md" />
+
+          <div class="row q-col-gutter-lg">
+            <div class="col-12 col-md-6">
+              <div class="predef-detail-content">
+                <div class="text-subtitle1 q-mb-sm"><q-icon name="route" size="16px" class="q-mr-xs" /> Rota</div>
+                <ul class="q-mb-lg">
+                  <li v-for="(r, ri) in routeList(predefSelectedPlan)" :key="ri">{{ r }}</li>
+                </ul>
+
+                <div class="text-subtitle1 q-mb-sm"><q-icon name="sell" size="16px" class="q-mr-xs" /> Temalar</div>
+                <ul class="q-mb-lg">
+                  <li v-for="(t, ti) in themeList(predefSelectedPlan)" :key="ti">{{ t }}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+              <div class="predef-detail-content">
+                <div class="text-subtitle1 q-mb-sm"><q-icon name="emoji_nature" size="16px" class="q-mr-xs" /> -nerilen Aktiviteler</div>
+                <ul class="q-mb-lg">
+                  <li v-for="(a, ai) in suggestedActivities(predefSelectedPlan)" :key="ai">{{ a }}</li>
+                </ul>
+
+                <div class="text-subtitle1 q-mb-sm"><q-icon name="hotel" size="16px" class="q-mr-xs" /> Konaklama -nerileri</div>
+                <ul class="q-mb-lg">
+                  <li v-for="(k, ki) in suggestedStays(predefSelectedPlan)" :key="ki">{{ k }}</li>
+                </ul>
+
+                <div class="text-subtitle1 q-mb-sm"><q-icon name="directions_bus" size="16px" class="q-mr-xs" /> UlaYım -nerileri</div>
+                <ul>
+                  <li v-for="(u, ui) in suggestedTransport(predefSelectedPlan)" :key="ui">{{ u }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat color="grey-5" label="Kapat" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+  </q-page>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
+import { useQuasar } from 'quasar';
+
+const $q = useQuasar();
+
+// API Base URL - Direkt backend'e baYlan
+axios.defaults.baseURL = 'http://localhost:3001';
+
+const queryText = ref('');
+const responseText = ref('');
+const isLoading = ref(false);
+
+// Auth State
+const loginDialog = ref(false);
+const registerDialog = ref(false);
+const loginEmail = ref('');
+const loginPassword = ref('');
+const registerName = ref('');
+const registerEmail = ref('');
+const registerPassword = ref('');
+const showLoginPassword = ref(false);
+const showRegisterPassword = ref(false);
+const authLoading = ref(false);
+const token = ref(localStorage.getItem('token') || '');
+const userName = ref(localStorage.getItem('userName') || '');
+const userId = ref(localStorage.getItem('userId') || '');
+const isLoggedIn = computed(() => !!token.value);
+
+// Plans State
+const myPlansDialog = ref(false);
+const viewPlanDialog = ref(false);
+const savedPlans = ref([]);
+// Kararsız Kaldım (Sabit Planlar)
+const indecisiveDialog = ref(false);
+const predefDetailDialog = ref(false);
+const predefSelectedPlan = ref(null);
+const predefActive = ref('TR'); // TR | INTL
+const predefPlans = ref({
+  tr: [
+    {
+      title: 'Ege Kıyıları Tatil Planı',
+      route: 'İzmir  Çeşme  Kuşadası → Didim → Bodrum',
+      duration: '6–8 gün',
+      themes: 'Deniz, plaj, gece hayatı, yöresel lezzetler',
+      advantage: 'Yaz tatili için popüler, ulaşımı kolay',
+      region: 'TR'
+    },
+    {
+      title: 'Kapadokya & İç Anadolu Planı',
+      route: 'Nevşehir  Göreme  Ürgüp  Avanos  Ihlara Vadisi',
+      duration: '35 gün',
+      themes: 'Balon turu, tarihi yerler, doğa yürüyüşleri',
+      advantage: 'Dünya çapında ünlü, kısa tatiller için uygun',
+      region: 'TR'
+    },
+    {
+      title: 'Akdeniz Turkuaz Kıyıları Planı',
+      route: 'Antalya  Kaş  Kalkan  Fethiye  Ölüdeniz',
+      duration: '69 gün',
+      themes: 'Deniz, tekne turları, doğa aktiviteleri',
+      advantage: 'Turkuaz denizler, Likya Yolu yürüyüş rotaları',
+      region: 'TR'
+    },
+    {
+      title: 'Karadeniz Yeşil Yol Planı',
+      route: 'Trabzon  Rize  Ayder Yaylası  Uzungöl  Artvin',
+      duration: '67 gün',
+      themes: 'Yayla turizmi, doğa, şelaleler, yöresel mutfak',
+      advantage: 'Serin iklim, doğa severler için ideal',
+      region: 'TR'
+    },
+    {
+      title: 'Marmara Kültür & Tarih Planı',
+      route: 'İstanbul  Bursa  Çanakkale  Edirne  Tekirdağ',
+      duration: '57 gün',
+      themes: 'Osmanlı tarihi, müzeler, gastronomi, şehir keşfi',
+      advantage: 'Tarih ve kültür odaklı, şehirler arası kolay ulaşım',
+      region: 'TR'
+    }
+  ],
+  intl: [
+    {
+      title: 'Avrupa Başkentleri Turu',
+      route: 'Paris  Brüksel  Amsterdam  Berlin  Prag',
+      duration: '710 gün',
+      themes: 'Sanat, tarih, kültür, şehir hayatı',
+      advantage: 'Ulaşımı kolay, kısa mesafeli şehir geçişleri',
+      region: 'INTL'
+    },
+    {
+      title: 'Balkan Kültür & Doğa Planı',
+      route: 'Belgrad  Saraybosna  Mostar  Dubrovnik  Kotor',
+      duration: '68 gün',
+      themes: 'Tarih, doğa, deniz tatili, yöresel yemekler',
+      advantage: 'Uygun fiyatlı, vize kolaylığı, yakın destinasyon',
+      region: 'INTL'
+    },
+    {
+      title: 'İskandinav & Kuzey Işıkları Planı',
+      route: 'Stockholm  Oslo  Bergen  Tromsø  Reykjavik',
+      duration: '812 gün',
+      themes: 'Kuzey ışıkları, doğa, fiyortlar, modern şehirler',
+      advantage: 'Doğa severler için eşsiz deneyim',
+      region: 'INTL'
+    },
+    {
+      title: 'Asya Egzotik Macera Planı',
+      route: 'Bangkok  Chiang Mai  Hanoi  Halong Bay  Bali',
+      duration: '1014 gün',
+      themes: 'Tropikal plajlar, doğa, kültür, macera',
+      advantage: 'Egzotik tatil, uygun maliyetli aktiviteler',
+      region: 'INTL'
+    },
+    {
+      title: 'Amerika Şehir & Doğa Planı',
+      route: 'New York  Washington D.C.  Orlando  Miami  Grand Canyon (Las Vegas üzerinden)',
+      duration: '1014 gün',
+      themes: 'Şehir hayatı, eğlence parkları, doğa harikaları',
+      advantage: 'Hem şehir hem doğa deneyimi bir arada',
+      region: 'INTL'
+    }
+  ]
+});
+
+const openIndecisive = () => {
+  predefActive.value = 'TR';
+  indecisiveDialog.value = true;
+};
+
+const showPredefDetail = (plan) => {
+  predefSelectedPlan.value = plan;
+  predefDetailDialog.value = true;
+};
+
+const buildQueryFromPredefPlan = (plan) => {
+  return `${plan.title} için ${plan.duration} süreli detaylı bir seyahat planı oluştur. Rota: ${plan.route}. Temalar: ${plan.themes}. Avantaj: ${plan.advantage}. Günlük rota, ulaşım ve konaklama önerileri içersin.`;
+};
+
+const buildPredefContent = (plan) => {
+  return `## ${plan.title}\n\n**Rota:** ${plan.route}\n\n**Süre:** ${plan.duration}\n\n**Temalar:** ${plan.themes}\n\n**Avantaj:** ${plan.advantage}`;
+};
+
+const selectPredefPlan = async (plan) => {
+  indecisiveDialog.value = false;
+  predefDetailDialog.value = false;
+  queryText.value = buildQueryFromPredefPlan(plan);
+  $q.notify({ message: 'Seçilen plan tercihlerinize göre hazırlanıyor...', color: 'info', icon: 'rocket_launch' });
+  const prev = responseText.value;
+  await getTravelPlan();
+  if (!responseText.value || responseText.value === prev || /hata oluYtu/i.test(responseText.value)) {
+    responseText.value = buildPredefContent(plan);
+    $q.notify({ message: 'AI yanıtı alınamadı, plan özeti gösteriliyor.', color: 'warning', icon: 'warning' });
+  }
+};
+
+// Detay DiyaloYu için yardımcılar
+const routeList = (plan) => { if (!plan?.route) return []; return plan.route.split("").map(s => s.trim()).filter(Boolean); };
+
+const themeList = (plan) => {
+  if (!plan?.themes) return [];
+  return plan.themes.split(',').map(s => s.trim()).filter(Boolean);
+};
+
+const suggestedActivities = (plan) => {
+  const title = plan?.title || '';
+  if (/Kapadokya/i.test(title)) return ['Gün doğumunda balon turu', 'AYk Vadisi yürüyüşü', 'Yeraltı şehirleri ziyareti'];
+  if (/Ege|Akdeniz/i.test(title)) return ['Tekne turu', 'Sahil yürüyüşü', 'Yerel pazar keşfi'];
+  if (/Karadeniz/i.test(title)) return ['Yayla trekking', 'Şelale rotaları', 'Fırtına Deresi rafting'];
+  if (/Avrupa BaYkentleri/i.test(title)) return ['Müze pass ile kültür turu', 'Tarihi meydanlar yürüyüşü', 'Kanal turu'];
+  if (/Balkan/i.test(title)) return ['Eski şehir turları', 'Kıyı yürüyüşü', 'Yerel mutfak tadımı'];
+  if (/İskandinav|Kuzey Işıkları/i.test(title)) return ['Aurora izleme turları', 'Fiyort tekne gezisi', 'Şehir bisiklet turu'];
+  if (/Asya/i.test(title)) return ['Tapınak turları', 'Gece pazarları', 'Ada turları'];
+  if (/Amerika/i.test(title)) return ['Şehir gözlem terasları', 'Ulusal park yürüyüşü', 'Tema park ziyareti'];
+  return ['Şehir yürüyüY turu', 'Yerel lezzet durakları', 'Panoramik fotoğraf noktaları'];
+};
+
+const suggestedStays = (plan) => {
+  const region = plan?.region;
+  if (region === 'TR') return ['Merkezde butik otel', 'Sahil kenarında apart', 'DoYa içi bungalov'];
+  return ['Şehir merkezinde 3-4~. otel', 'UlaYım hatlarına yakın konaklama', 'Yerel konseptli butik otel'];
+};
+
+const suggestedTransport = (plan) => {
+  const region = plan?.region;
+  if (region === 'TR') return ['Şehirler arası otobüs/araç', 'Araç kiralama ile esnek rota', 'Kısa mesafede minibüs/dolmuş'];
+  return ['Ucuz uçuYlar arası geçiş', 'Şehir içi toplu taşıma kartı', 'Yürünebilir merkezler için bisiklet/skuter'];
+};
+// Detay görselleri
+const imageList = (plan) => {
+  if (!plan) return [];
+  const seed = encodeURIComponent((plan.title || plan.region || 'travel') + '-' + Date.now());
+  // -rnek görseller (picsum) ?" her açılıYta farklı seed ile 4 kare
+  return [1, 2, 3, 4].map(i => `https://picsum.photos/seed/${seed}-${i}/1024/576`);
+};
+
+// 'Seç' akıYı: plan özetini üret, panoya kopyala ve giriY kutusuna yapıYtır
+const buildPredefSummary = (plan) => {
+  if (!plan) return '';
+  const lines = [
+    `${plan.title}`,
+    `Rota: ${plan.route}`,
+    `Süre: ${plan.duration}`,
+    `Temalar: ${plan.themes}`,
+    `Avantaj: ${plan.advantage}`
+  ];
+  return lines.join('\n');
+};
+
+const selectPredefSummary = async (plan) => {
+  const summary = buildPredefSummary(plan);
+  // Input alanına yerleYtir
+  queryText.value = summary;
+  // Panoya kopyala (destek yoksa sessiz geç)
+  try {
+    await navigator.clipboard.writeText(summary);
+    $q.notify({ message: 'Plan özeti kopyalandı ve metin kutusuna eklendi.', color: 'positive', icon: 'content_copy' });
+  } catch (e) {
+    $q.notify({ message: '-zet kutuya eklendi. Kopyalama izin vermedi.', color: 'info', icon: 'info' });
+  }
+  // Otomatik oluşturma YOK; dialogları kapat
+  predefDetailDialog.value = false;
+  indecisiveDialog.value = false;
+};
+const selectedPlan = ref(null);
+const loadingPlans = ref(false);
+
+// Axios interceptor - Her istekte token ekle
+axios.interceptors.request.use(config => {
+  if (token.value) {
+    config.headers.Authorization = `Bearer ${token.value}`;
+  }
+  return config;
+});
+
+// ===== ?ARK (Wheel) State & Metodlar =====
+const spinDialog = ref(false);
+const spinRegion = ref('TR'); // TR | INTL | MIX
+const isSpinning = ref(false);
+const selectedResultTitle = ref('');
+
+const getSpinPool = () => {
+  if (spinRegion.value === 'TR') return predefPlans.value.tr;
+  if (spinRegion.value === 'INTL') return predefPlans.value.intl;
+  // MIX
+  return [...predefPlans.value.tr, ...predefPlans.value.intl];
+};
+
+const wheelItems = computed(() => getSpinPool());
+
+const openSpinDialog = () => {
+  // Varsayılan olarak mevcut aktif bölgeyi taYı
+  spinRegion.value = predefActive.value === 'INTL' ? 'INTL' : 'TR';
+  selectedResultTitle.value = '';
+  spinDialog.value = true;
+};
+
+const spinWheel = async () => {
+  if (isSpinning.value || wheelItems.value.length === 0) return;
+  isSpinning.value = true;
+  // Basit animasyon bekleme simülasyonu
+  const pool = getSpinPool();
+  const delay = (ms) => new Promise(res => setTimeout(res, ms));
+  await delay(1600);
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  isSpinning.value = false;
+  // Sonucu dialog içinde göster
+  selectedResultTitle.value = picked.title;
+  predefSelectedPlan.value = picked;
+  $q.notify({ message: `?ark seçimi: ${picked.title}`, color: 'accent', icon: 'auto_awesome' });
+};
+
+// Dilim overlay konumlandırma
+const sliceStyle = (index, total) => {
+  // Etiketi dilimlerin ortasına yerleYtir, metni okunur tutmak için karYı-rotasyon uygula
+  const angle = (360 / total) * (index + 0.5);
+  const radius = 120; // pixel cinsinden dıY yarıçap mesafesi
+  return {
+    transform: `rotate(${angle}deg) translateY(-${radius}px) rotate(${-angle}deg)`,
+  };
+};
+
+// Modallar
+const openLogin = () => { 
+  loginDialog.value = true; 
+  registerDialog.value = false; 
+  loginEmail.value = '';
+  loginPassword.value = '';
+};
+
+const openRegister = () => { 
+  registerDialog.value = true; 
+  loginDialog.value = false; 
+  registerName.value = '';
+  registerEmail.value = '';
+  registerPassword.value = '';
+};
+
+// Auth Functions
+const handleLogin = async () => {
+  if (!loginEmail.value || !loginPassword.value) {
+    $q.notify({ message: 'Tüm alanları doldurunuz', color: 'negative', icon: 'warning' });
+    return;
+  }
+
+  authLoading.value = true;
+  try {
+    const response = await axios.post('/api/auth/login', {
+      email: loginEmail.value,
+      password: loginPassword.value
+    });
+
+    token.value = response.data.token;
+    userName.value = response.data.user.name;
+    userId.value = response.data.user.id;
+
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('userName', response.data.user.name);
+    localStorage.setItem('userId', response.data.user.id);
+
+    $q.notify({ 
+      message: `HoY geldin ${response.data.user.name}! gY?`, 
+      color: 'positive', 
+      icon: 'check_circle' 
+    });
+
+    loginDialog.value = false;
+    loginEmail.value = '';
+    loginPassword.value = '';
+  } catch (error) {
+    console.error('Login error:', error);
+    $q.notify({ 
+      message: error.response?.data?.error || 'GiriY baYarısız', 
+      color: 'negative', 
+      icon: 'error' 
+    });
+  } finally {
+    authLoading.value = false;
+  }
+};
+
+const handleRegister = async () => {
+  if (!registerName.value || !registerEmail.value || !registerPassword.value) {
+    $q.notify({ message: 'Tüm alanları doldurunuz', color: 'negative', icon: 'warning' });
+    return;
+  }
+
+  if (registerPassword.value.length < 6) {
+    $q.notify({ message: 'Şifre en az 6 karakter olmalıdır', color: 'negative', icon: 'warning' });
+    return;
+  }
+
+  authLoading.value = true;
+  try {
+    const response = await axios.post('/api/auth/register', {
+      name: registerName.value,
+      email: registerEmail.value,
+      password: registerPassword.value
+    });
+
+    token.value = response.data.token;
+    userName.value = response.data.user.name;
+    userId.value = response.data.user.id;
+
+    localStorage.setItem('token', response.data.token);
+    localStorage.setItem('userName', response.data.user.name);
+    localStorage.setItem('userId', response.data.user.id);
+
+    $q.notify({ 
+      message: `Kayıt baYarılı! HoY geldin ${response.data.user.name}! gY?`, 
+      color: 'positive', 
+      icon: 'check_circle' 
+    });
+
+    registerDialog.value = false;
+    registerName.value = '';
+    registerEmail.value = '';
+    registerPassword.value = '';
+  } catch (error) {
+    console.error('Register error:', error);
+    $q.notify({ 
+      message: error.response?.data?.error || 'Kayıt baYarısız', 
+      color: 'negative', 
+      icon: 'error' 
+    });
+  } finally {
+    authLoading.value = false;
+  }
+};
+
+const logout = () => {
+  token.value = '';
+  userName.value = '';
+  userId.value = '';
+  localStorage.removeItem('token');
+  localStorage.removeItem('userName');
+  localStorage.removeItem('userId');
+  
+  $q.notify({ 
+    message: 'Çıkış yapıldı. Görüşmek üzere!', 
+    color: 'info', 
+    icon: 'logout' 
+  });
+};
+
+// Gemini format
+const formattedResponse = computed(() => {
+  if (!responseText.value) return '';
+  return formatPlanContent(responseText.value);
+});
+
+const formatPlanContent = (content) => {
+  if (!content) return '';
+  return content
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-accent">$1</strong>')
+    .replace(/\*(.*?)\n/g, '<div class="q-pl-lg q-mb-sm"><span class="text-accent">-</span> $1</div>')
+    .replace(/### (.*?)\n/g, '<h3 class="text-h5 text-weight-bold q-mt-xl q-mb-md text-white">$1</h3>')
+    .replace(/## (.*?)\n/g, '<h2 class="text-h4 text-weight-black q-mt-xl q-mb-lg travel-gradient">$1</h2>')
+    .replace(/---/g, '<hr class="q-my-xl border-accent">');
+};
+
+// Travel Plan
+const getTravelPlan = async () => {
+  if (!queryText.value.trim()) return;
+
+  isLoading.value = true;
+  responseText.value = '';
+
+  try {
+    const response = await axios.post('/api/travel', { queryText: queryText.value });
+    responseText.value = response.data.plan;
+  } catch (err) {
+    console.error(err);
+    responseText.value = 'ozgünüm, bir hata oluYtu. Lütfen tekrar deneyin.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const clearResults = () => {
+  responseText.value = '';
+  queryText.value = '';
+};
+
+// Save Plan
+const saveTravelPlan = async () => {
+  if (!isLoggedIn.value) {
+    $q.notify({ 
+      message: 'Planı kaydetmek için giriY yapmalısınız', 
+      color: 'warning', 
+      icon: 'warning',
+      actions: [{ label: 'GiriY Yap', color: 'white', handler: openLogin }]
+    });
+    return;
+  }
+
+  if (!responseText.value) {
+    $q.notify({ message: 'Kaydedilecek plan bulunamadı', color: 'negative', icon: 'error' });
+    return;
+  }
+
+  $q.dialog({
+    title: 'Plan BaYlıYı',
+    message: 'Planınıza bir baYlık verin:',
+    prompt: {
+      model: queryText.value.substring(0, 100),
+      type: 'text'
+    },
+    cancel: true,
+    persistent: true,
+    dark: true
+  }).onOk(async (title) => {
+    try {
+      await axios.post('/api/plans', {
+        title: title || queryText.value.substring(0, 100),
+        query: queryText.value,
+        plan: responseText.value
+      });
+
+      $q.notify({ 
+        message: 'Plan baYarıyla kaydedildi! gY"', 
+        color: 'positive', 
+        icon: 'check_circle' 
+      });
+    } catch (error) {
+      console.error('Save plan error:', error);
+      $q.notify({ 
+        message: error.response?.data?.error || 'Plan kaydedilemedi', 
+        color: 'negative', 
+        icon: 'error' 
+      });
+    }
+  });
+};
+
+// Share
+const sharePlan = async () => {
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Seyahat Planım',
+        text: queryText.value,
+        url: window.location.href,
+      });
+    } else {
+      await navigator.clipboard.writeText(`${queryText.value}\n\n${responseText.value}`);
+      $q.notify({ message: 'Plan panoya kopyalandı!', color: 'accent', icon: 'content_copy' });
+    }
+  } catch {
+    $q.notify({ message: 'PaylaYım baYarısız', color: 'negative', icon: 'error' });
+  }
+};
+
+// My Plans Functions
+const showMyPlans = async () => {
+  myPlansDialog.value = true;
+  await loadPlans();
+};
+
+const loadPlans = async () => {
+  loadingPlans.value = true;
+  try {
+    const response = await axios.get('/api/plans');
+    savedPlans.value = response.data.plans;
+  } catch (error) {
+    console.error('Load plans error:', error);
+    $q.notify({ 
+      message: 'Planlar yüklenemedi', 
+      color: 'negative', 
+      icon: 'error' 
+    });
+  } finally {
+    loadingPlans.value = false;
+  }
+};
+
+const viewPlan = (plan) => {
+  selectedPlan.value = plan;
+  viewPlanDialog.value = true;
+};
+
+const deletePlan = async (planId) => {
+  $q.dialog({
+    title: 'Planı Sil',
+    message: 'Bu planı silmek istediYinizden emin misiniz?',
+    cancel: true,
+    persistent: true,
+    dark: true
+  }).onOk(async () => {
+    try {
+      await axios.delete(`/api/plans/${planId}`);
+      savedPlans.value = savedPlans.value.filter(p => p._id !== planId);
+      $q.notify({ 
+        message: 'Plan silindi', 
+        color: 'positive', 
+        icon: 'delete' 
+      });
+    } catch (error) {
+      console.error('Delete plan error:', error);
+      $q.notify({ 
+        message: 'Plan silinemedi', 
+        color: 'negative', 
+        icon: 'error' 
+      });
+    }
+  });
+};
+
+const toggleFavorite = async (planId) => {
+  try {
+    const response = await axios.patch(`/api/plans/${planId}/favorite`);
+    const plan = savedPlans.value.find(p => p._id === planId);
+    if (plan) {
+      plan.isFavorite = response.data.plan.isFavorite;
+    }
+    $q.notify({ 
+      message: response.data.message, 
+      color: 'positive', 
+      icon: response.data.plan.isFavorite ? 'favorite' : 'favorite_border' 
+    });
+  } catch (error) {
+    console.error('Toggle favorite error:', error);
+    $q.notify({ 
+      message: 'İYlem baYarısız', 
+      color: 'negative', 
+      icon: 'error' 
+    });
+  }
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('tr-TR', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Check auth on mount
+onMounted(async () => {
+  if (token.value) {
+    try {
+      await axios.get('/api/auth/me');
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      logout();
+    }
+  }
+});
+</script>
+
+<style scoped>
+/* ===== SEYAHAT TEMALI MODERN TASARIM ===== */
+
+/* Ana Arkaplan - Seyahat Temalı Gradient */
+.bg-travel { 
+  background: linear-gradient(135deg, #0a1628 0%, #1a2332 25%, #0f1b2e 50%, #1a2840 75%, #0a1628 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-travel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(0, 188, 212, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(33, 150, 243, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Gradient Text - Seyahat Renkleri */
+.travel-gradient { 
+  background: linear-gradient(135deg, #00e5ff 0%, #00bcd4 30%, #2196f3 60%, #00e5ff 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientFlow 3s ease infinite;
+}
+
+@keyframes gradientFlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Glass Effect - GeliYtirilmiY */
+.glass-effect-enhanced { 
+  background: rgba(26, 35, 50, 0.7);
+  backdrop-filter: blur(30px) saturate(180%);
+  border: 2px solid rgba(0, 188, 212, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 40px rgba(0, 188, 212, 0.1);
+}
+
+/* Kartlar */
+.search-card, .result-card, .loading-card { 
+  border-radius: 28px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.search-card:hover, .result-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(0, 188, 212, 0.2);
+  border-color: rgba(0, 188, 212, 0.4);
+}
+
+/* Hero Section */
+.hero-section {
+  animation: fadeInDown 0.8s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animated-title {
+  animation: titlePulse 2s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.subtitle-text {
+  animation: fadeIn 1s ease-out 0.3s both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hero İkonlar */
+.hero-icon-wrapper {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-icons {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.rotating-icon {
+  animation: rotateFloat 6s ease-in-out infinite;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes rotateFloat {
+  0%, 100% { transform: translate(-50%, -50%) rotate(-5deg) translateY(0px); }
+  25% { transform: translate(-50%, -50%) rotate(5deg) translateY(-10px); }
+  50% { transform: translate(-50%, -50%) rotate(-5deg) translateY(0px); }
+  75% { transform: translate(-50%, -50%) rotate(5deg) translateY(-10px); }
+}
+
+.floating-icon-1, .floating-icon-2, .floating-icon-3 {
+  position: absolute;
+  animation: floatAround 8s ease-in-out infinite;
+}
+
+.floating-icon-1 {
+  top: 10%;
+  right: 10%;
+  animation-delay: 0s;
+}
+
+.floating-icon-2 {
+  bottom: 15%;
+  left: 5%;
+  animation-delay: 2s;
+}
+
+.floating-icon-3 {
+  top: 50%;
+  right: 0%;
+  animation-delay: 4s;
+}
+
+@keyframes floatAround {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.6; }
+  25% { transform: translate(10px, -15px) rotate(5deg); opacity: 1; }
+  50% { transform: translate(-5px, -10px) rotate(-5deg); opacity: 0.7; }
+  75% { transform: translate(15px, 5px) rotate(3deg); opacity: 0.9; }
+}
+
+/* Feature Badges */
+.feature-badges {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeIn 1s ease-out 0.5s both;
+}
+
+.feature-badge {
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border-width: 2px !important;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.feature-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+}
+
+/* Search Header */
+.search-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(0, 188, 212, 0.2);
+}
+
+/* Input - GeliYtirilmiY */
+.custom-input-enhanced :deep(.q-field__control) { 
+  border-radius: 16px;
+  font-size: 1.15em;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(0, 188, 212, 0.3);
+  transition: all 0.3s ease;
+}
+
+.custom-input-enhanced :deep(.q-field__control):hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 188, 212, 0.5);
+}
+
+.custom-input-enhanced :deep(.q-field__control):focus-within {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #00bcd4;
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.3);
+}
+
+.pulse-icon {
+  animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Action Button - GeliYtirilmiY */
+.action-button-enhanced { 
+  border-radius: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+  box-shadow: 0 4px 15px rgba(0, 188, 212, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.action-button-enhanced:hover::before {
+  left: 100%;
+}
+
+.action-button-enhanced:hover { 
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 188, 212, 0.5);
+}
+
+.action-button-enhanced:active {
+  transform: translateY(-1px);
+}
+
+/* Result Header */
+.result-header {
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-icon-wrapper {
+  animation: bounceIn 0.8s ease-out;
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.action-buttons-wrapper {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.action-btn-modern {
+  border-radius: 12px;
+  padding: 8px 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.action-btn-modern:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.separator-glow {
+  height: 2px;
+  box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+}
+
+/* Travel Content - GeliYtirilmiY */
+.travel-content { 
+  max-height: 65vh;
+  overflow-y: auto;
+  animation: fadeIn 0.8s ease-out 0.3s both;
+}
+
+.scroll-design-enhanced::-webkit-scrollbar { 
+  width: 10px;
+}
+
+.scroll-design-enhanced::-webkit-scrollbar-track { 
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+.scroll-design-enhanced::-webkit-scrollbar-thumb { 
+  background: linear-gradient(180deg, #00e5ff, #00bcd4, #0097a7);
+  border-radius: 10px;
+  border: 2px solid rgba(26, 35, 50, 0.7);
+  transition: all 0.3s ease;
+}
+
+.scroll-design-enhanced::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #00e5ff, #2196f3);
+  box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+}
+
+.line-height-2 { line-height: 2; }
+
+.content-text-enhanced { 
+  font-size: 1.15em;
+  color: #e0e0e0;
+}
+
+.content-text-enhanced strong {
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(0, 188, 212, 0.3);
+}
+
+/* Glow Effect */
+.glow-effect { 
+  filter: drop-shadow(0 0 25px rgba(0, 188, 212, 0.6));
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { filter: drop-shadow(0 0 25px rgba(0, 188, 212, 0.6)); }
+  50% { filter: drop-shadow(0 0 35px rgba(0, 188, 212, 0.8)); }
+}
+
+/* Loading Dialog - GeliYtirilmiY */
+.plane-container-enhanced { 
+  position: relative;
+  width: 200px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flying-plane-enhanced { 
+  animation: flyEnhanced 3s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes flyEnhanced { 
+  0%, 100% { transform: translateY(0px) rotate(-5deg) translateX(-10px); }
+  25% { transform: translateY(-15px) rotate(5deg) translateX(10px); }
+  50% { transform: translateY(-5px) rotate(-3deg) translateX(-5px); }
+  75% { transform: translateY(-20px) rotate(3deg) translateX(15px); }
+}
+
+.cloud-1, .cloud-2, .cloud-3 {
+  position: absolute;
+  animation: cloudFloat 6s ease-in-out infinite;
+  opacity: 0.4;
+}
+
+.cloud-1 {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.cloud-2 {
+  top: 60%;
+  right: 15%;
+  animation-delay: 2s;
+}
+
+.cloud-3 {
+  bottom: 20%;
+  left: 20%;
+  animation-delay: 4s;
+}
+
+@keyframes cloudFloat {
+  0%, 100% { transform: translateX(0px); opacity: 0.3; }
+  50% { transform: translateX(30px); opacity: 0.6; }
+}
+
+.plane-container-enhanced::after { 
+  content: '';
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 6px;
+  background: linear-gradient(90deg, transparent, rgba(0, 188, 212, 0.6), transparent);
+  border-radius: 50%;
+  animation: shadowPulse 3s ease-in-out infinite;
+}
+
+@keyframes shadowPulse { 
+  0%, 100% { opacity: 0.4; width: 120px; }
+  50% { opacity: 0.8; width: 140px; }
+}
+
+.loading-steps {
+  animation: fadeIn 1s ease-out 0.5s both;
+}
+
+.loading-steps .text-caption {
+  margin: 4px 0;
+  animation: textFade 3s ease-in-out infinite;
+}
+
+.loading-steps .text-caption:nth-child(1) { animation-delay: 0s; }
+.loading-steps .text-caption:nth-child(2) { animation-delay: 1s; }
+.loading-steps .text-caption:nth-child(3) { animation-delay: 2s; }
+
+@keyframes textFade {
+  0%, 100% { opacity: 0.5; }
+  33% { opacity: 1; }
+}
+
+.progress-glow {
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.5);
+}
+
+/* Responsive */
+.gap-sm { gap: 12px; }
+
+@media (min-width: 1400px) { 
+  .col-lg-8 { max-width: 1200px; }
+  .col-lg-10 { max-width: 1400px; }
+  .travel-content { max-height: 60vh; }
+}
+
+@media (max-width: 1024px) { 
+  .q-pa-xl { padding: 24px; }
+  .search-card, .result-card { padding: 24px !important; }
+  .hero-icon-wrapper { width: 150px; height: 150px; }
+}
+
+@media (max-width: 600px) {
+  .feature-badges { gap: 8px; }
+  .feature-badge { font-size: 12px; padding: 6px 12px; }
+  .action-buttons-wrapper { justify-content: center; }
+  .action-btn-modern { font-size: 12px; padding: 6px 16px; }
+}
+
+/* Auth Buttons Wrapper */
+.auth-buttons-wrapper {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fadeIn 1s ease-out 0.7s both;
+}
+
+.user-info-wrapper {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  animation: fadeIn 1s ease-out 0.7s both;
+}
+
+.user-chip {
+  font-size: 16px;
+  padding: 12px 20px;
+  font-weight: 600;
+}
+
+/* Modern Auth Butonları */
+.auth-btn {
+  border-radius: 12px;
+  padding: 12px 32px;
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+  margin: 0 8px;
+  margin-bottom: 5%;
+}
+
+.auth-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.7s ease;
+}
+
+.auth-btn:hover::before {
+  left: 100%;
+}
+
+.auth-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.auth-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* GiriY Yap Butonu */
+
+.auth-btn:hover::after {
+  transform: translateX(3px);
+}
+
+/* Responsive Tasarım */
+@media (max-width: 600px) {
+  .auth-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+    min-width: 120px;
+    margin: 4px;
+  }
+  
+  .row.gap-sm {
+    gap: 8px;
+  }
+}
+
+/* Loading durumu için */
+.auth-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.auth-btn.loading::after {
+  content: '...';
+  animation: loadingDots 1.5s infinite;
+}
+
+@keyframes loadingDots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* Focus durumu için */
+.auth-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+/* Modern Auth Modal Stilleri */
+.auth-modal {
+  min-width: 400px;
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease infinite;
+}
+
+.login-modal::before {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.register-modal::before {
+  background: linear-gradient(90deg, #f093fb, #f5576c);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f5576c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* -zelleYtirilmiY Input Alanları */
+.custom-input .q-field__control {
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.custom-input .q-field__control:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-input .q-field__control:focus-within {
+  border-color: currentColor;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.custom-input .q-field__label {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 500;
+}
+
+/* Submit Butonları */
+.auth-submit-btn {
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.auth-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.7s ease;
+}
+
+.auth-submit-btn:hover::before {
+  left: 100%;
+}
+
+.auth-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Switch Auth Butonu */
+.switch-auth-btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.switch-auth-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.switch-auth-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.switch-auth-btn:hover::after {
+  width: 100%;
+}
+
+/* Responsive Tasarım */
+@media (max-width: 600px) {
+  .auth-modal {
+    min-width: 90vw;
+    margin: 20px;
+  }
+  
+  .q-pa-xl {
+    padding: 24px;
+  }
+  
+  .text-h4 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Loading Durumu */
+.auth-submit-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.auth-submit-btn.loading .q-btn__content {
+  opacity: 0;
+}
+
+.auth-submit-btn.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Plan Cards */
+.plan-card {
+  transition: all 0.3s ease;
+  border-radius: 20px;
+}
+
+.plan-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 188, 212, 0.3);
+}
+
+.plan-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Switch Auth Button */
+.switch-auth-btn {
+  transition: all 0.3s ease;
+}
+
+.switch-auth-btn:hover {
+  transform: scale(1.05);
+}
+
+/* ===== PLANLARIM DİYALOGU - İYİLEŞTİRİLMİŞ ===== */
+
+.plans-header-enhanced {
+  background: linear-gradient(135deg, #1a2840 0%, #0f1b2e 100%);
+  padding: 16px 24px;
+  border-bottom: 2px solid rgba(0, 188, 212, 0.3);
+}
+
+/* Loading State Enhanced */
+.loading-state-enhanced {
+  text-align: center;
+  padding: 100px 20px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.plane-animation-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 40px;
+}
+
+.cloud-float-1, .cloud-float-2 {
+  position: absolute;
+  animation: cloudFloat 4s ease-in-out infinite;
+}
+
+.cloud-float-1 {
+  top: 20%;
+  left: -60px;
+  animation-delay: 0s;
+}
+
+.cloud-float-2 {
+  top: 60%;
+  right: -50px;
+  animation-delay: 1s;
+}
+
+@keyframes cloudFloat {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(20px) translateY(-10px); }
+}
+
+/* Empty State Enhanced */
+.empty-state-enhanced {
+  text-align: center;
+  padding: 100px 20px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.empty-icon-container {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.float-animation {
+  animation: floatUp 3s ease-in-out infinite;
+}
+
+.small-float-animation {
+  position: absolute;
+  top: 10%;
+  right: -20%;
+  animation: floatRotate 2s ease-in-out infinite;
+}
+
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes floatRotate {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(10deg); }
+}
+
+/* Plan Card Wrapper */
+.plan-card-wrapper {
+  animation: slideInUp 0.6s ease-out;
+  animation-fill-mode: both;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Plan Card Modern */
+.plan-card-modern {
+  background: rgba(26, 35, 50, 0.85);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(0, 188, 212, 0.25);
+  border-radius: 20px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.plan-card-modern:hover {
+  transform: translateY(-10px) scale(1.03);
+  border-color: rgba(0, 188, 212, 0.6);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    0 0 50px rgba(0, 188, 212, 0.4);
+}
+
+.plan-card-modern:hover .card-glow-overlay {
+  opacity: 1;
+}
+
+.card-glow-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.15) 0%, rgba(33, 150, 243, 0.15) 100%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+/* Favorite Star Badge */
+.favorite-star-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 193, 7, 0.25);
+  backdrop-filter: blur(10px);
+  padding: 8px 12px;
+  border-radius: 25px;
+  border: 2px solid rgba(255, 193, 7, 0.5);
+  z-index: 2;
+  animation: starPulse 2s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(255, 193, 7, 0.4);
+}
+
+@keyframes starPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 193, 7, 0.4); }
+  50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255, 193, 7, 0.6); }
+}
+
+/* Plan Card Sections */
+.plan-card-top {
+  padding: 24px;
+}
+
+.plan-title-modern {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #00e5ff;
+  text-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+  transition: all 0.3s ease;
+  margin-bottom: 8px;
+}
+
+.plan-card-modern:hover .plan-title-modern {
+  text-shadow: 0 0 25px rgba(0, 229, 255, 0.6);
+  transform: translateX(5px);
+}
+
+.plan-date-modern {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.favorite-btn-modern {
+  transition: all 0.3s ease;
+}
+
+.favorite-btn-modern:hover {
+  transform: scale(1.3) rotate(15deg);
+}
+
+.plan-card-middle {
+  padding: 20px 24px;
+  min-height: 90px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.plan-query-modern {
+  font-size: 0.95rem;
+  color: #d1d5db;
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-card-bottom {
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.plan-action-btn {
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.plan-action-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .plans-header-enhanced {
+    padding: 12px 16px;
+  }
+  
+  .plan-card-modern {
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .loading-state-enhanced,
+  .empty-state-enhanced {
+    padding: 60px 20px;
+  }
+  
+  .empty-icon-container .float-animation {
+    font-size: 100px !important;
+  }
+  
+  .plan-title-modern {
+    font-size: 1.1rem;
+  }
+}
+/* ===== ŞANS ?ARKI STİLLERİ ===== */
+.wheel-box {
+  position: relative;
+  width: 360px;
+  height: 360px;
+}
+
+.wheel-visual {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid rgba(0, 188, 212, 0.6);
+  box-shadow: 0 0 24px rgba(0, 188, 212, 0.25) inset, 0 0 20px rgba(0,0,0,0.4);
+  /* Basit renkli dilimler (placeholder) */
+  background: conic-gradient(
+    rgba(0, 188, 212, 0.25) 0 60deg,
+    rgba(33, 150, 243, 0.25) 60deg 120deg,
+    rgba(0, 230, 118, 0.25) 120deg 180deg,
+    rgba(255, 193, 7, 0.25) 180deg 240deg,
+    rgba(233, 30, 99, 0.25) 240deg 300deg,
+    rgba(156, 39, 176, 0.25) 300deg 360deg
+  );
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 18px solid #00e5ff;
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.7));
+  z-index: 3;
+}
+
+.wheel-labels {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 88%;
+  height: 88%;
+  pointer-events: none;
+}
+
+.wheel-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center bottom;
+  color: #e5e7eb;
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.8);
+  white-space: normal;
+  text-align: center;
+  max-width: 80px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.wheel-visual.spinning, .wheel-labels.spinning {
+  animation: wheelSpin 1.6s cubic-bezier(0.17, 0.67, 0.2, 1.2);
+}
+
+@keyframes wheelSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(720deg); }
+}
+
+/* Responsive: küçük ekranlarda çarkı küçült */
+@media (max-width: 600px) {
+  .wheel-box { width: 260px; height: 260px; }
+  .wheel-label { font-size: 9px; max-width: 60px; }
+}
+
+/* ===== KARARSIZ KALDIM DIALOG STİLLERİ ===== */
+.indecisive-dialog-card, .wheel-dialog-card, .predef-detail-dialog-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(100, 181, 246, 0.2);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.indecisive-dialog-card .q-bar {
+  background: linear-gradient(90deg, rgba(0, 188, 212, 0.15), rgba(33, 150, 243, 0.15));
+  border-bottom: 1px solid rgba(0, 188, 212, 0.3);
+}
+
+.wheel-dialog-card .q-bar {
+  background: linear-gradient(90deg, rgba(156, 39, 176, 0.15), rgba(233, 30, 99, 0.15));
+  border-bottom: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+.predef-detail-dialog-card .q-bar {
+  background: linear-gradient(90deg, rgba(0, 230, 118, 0.15), rgba(0, 188, 212, 0.15));
+  border-bottom: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+/* Plan kartları */
+.indecisive-plan-card {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8)) !important;
+  border: 1px solid rgba(100, 181, 246, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  position: relative;
+}
+
+.indecisive-plan-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 188, 212, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.indecisive-plan-card:hover::before {
+  left: 100%;
+}
+
+.indecisive-plan-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 188, 212, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(0, 188, 212, 0.2);
+}
+
+.indecisive-plan-card .text-subtitle1 {
+  color: #e0f2fe;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+
+/* Bölge seçim butonları */
+.region-select-btn {
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  padding: 12px 28px !important;
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
+}
+
+.region-select-btn:not(.q-btn--outline) {
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+  animation: regionPulse 2s ease-in-out infinite;
+}
+
+@keyframes regionPulse {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3); }
+  50% { box-shadow: 0 6px 20px rgba(0, 188, 212, 0.5); }
+}
+
+/* ?ark butonu */
+.spin-wheel-btn {
+  background: linear-gradient(135deg, #9c27b0, #e91e63) !important;
+  font-weight: 600 !important;
+  padding: 10px 24px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(233, 30, 99, 0.4);
+  transition: all 0.3s ease !important;
+}
+
+.spin-wheel-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 24px rgba(233, 30, 99, 0.6);
+}
+
+/* Detay butonu */
+.detail-btn {
+  background: linear-gradient(135deg, #00bcd4, #2196f3) !important;
+  font-weight: 600 !important;
+  transition: all 0.3s ease !important;
+  border-radius: 8px !important;
+}
+
+.detail-btn:hover {
+  background: linear-gradient(135deg, #00acc1, #1e88e5) !important;
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+}
+
+/* Chip'ler */
+.region-chip {
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+}
+
+/* Detay dialog içerik düzeni */
+.predef-detail-content {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(100, 181, 246, 0.1);
+}
+
+.predef-detail-content .text-subtitle1 {
+  color: #67e8f9;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+}
+
+.predef-detail-content ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.predef-detail-content ul li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.predef-detail-content ul li::before {
+  content: '-';
+  position: absolute;
+  left: 0;
+  color: #00e5ff;
+  font-size: 10px;
+}
+
+/* ?ark sonuç alanı */
+.wheel-result {
+  background: linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(0, 188, 212, 0.15));
+  border: 2px solid rgba(0, 230, 118, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  animation: resultFadeIn 0.5s ease;
+}
+
+@keyframes resultFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 768px) {
+  .region-select-btn {
+    font-size: 0.9rem !important;
+    padding: 10px 20px !important;
+  }
+  
+  .indecisive-plan-card .text-subtitle1 {
+    font-size: 0.95rem;
+  }
+}
+</style>
+
+

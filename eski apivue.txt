@@ -1,0 +1,701 @@
+<template>
+  <q-page class="q-pa-xl bg-dark text-white">
+
+<!-- Hero Section -->
+<div class="column items-center text-center q-mb-xxl">
+  <div class="hero-icon q-mb-lg">
+    <q-icon name="flight" size="120px" class="text-accent glow-effect" />
+  </div>
+  <h1 class="text-h2 text-weight-black text-gradient q-mb-xs">
+    AI SEYAHAT PLANLAYICI - KAYRA
+  </h1>
+  <p class="text-h6 text-grey-4">Yapay zeka ile mükemmel seyahat deneyimi</p>
+
+  <!-- Giriş / Kayıt Butonları -->
+<div class="row justify-center q-mt-md gap-sm">
+  <q-btn label="Giriş Yap" color="accent" unelevated class="auth-btn login-btn" @click="openLogin" />
+ </div>
+</div>
+
+    <!-- Search Section -->
+    <div class="row justify-center q-mb-xl">
+      <div class="col-12 col-md-10 col-lg-8">
+        <q-card class="search-card q-pa-xl glass-effect" dark>
+          <q-card-section class="q-pa-none">
+            <q-input
+              v-model="queryText"
+              outlined
+              dark
+              label="Hayalindeki seyahat neresi?"
+              placeholder="Örn: Tokyo'da 5 günlük macera, Paris'te romantik bir haftasonu..."
+              class="q-mb-lg custom-input"
+              :disable="isLoading"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" color="accent" />
+              </template>
+            </q-input>
+
+            <q-btn
+              label="SEYAHAT PLANI OLUŞTUR"
+              color="accent"
+              icon="rocket"
+              :loading="isLoading"
+              @click="getTravelPlan"
+              class="full-width action-button"
+              size="lg"
+              :disable="!queryText.trim()"
+            >
+              <template v-slot:loading>
+                <q-spinner-audio class="on-left" />
+                Planlama Yapılıyor...
+              </template>
+            </q-btn>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Result Section -->
+    <transition
+      enter-active-class="animated zoomIn"
+      leave-active-class="animated zoomOut"
+      mode="out-in"
+      duration="300"
+    >
+      <div v-if="responseText" class="row justify-center">
+        <div class="col-12 col-md-11 col-lg-10">
+          <q-card class="result-card q-pa-xl glass-effect" dark>
+            <q-card-section class="q-pa-none">
+              <div class="row items-center justify-between q-mb-lg">
+                <div class="row items-center">
+                  <q-icon name="travel_explore" color="accent" size="md" class="q-mr-sm" />
+                  <div class="text-h4 text-weight-bold text-accent">SEYAHAT PLANIN</div>
+                </div>
+                <div class="row items-center gap-sm">
+                  <q-btn 
+                    label="Yeni Plan" 
+                    color="grey-8" 
+                    outline 
+                    @click="clearResults"
+                    icon="add_circle"
+                    class="q-px-lg"
+                  />
+                  <q-btn 
+                    label="Paylaş" 
+                    color="accent" 
+                    @click="sharePlan"
+                    icon="share"
+                    class="q-px-lg share-button"
+                  />
+                  <q-btn 
+                    label="Planı Kaydet" 
+                    color="accent" 
+                    icon="save"
+                    class="q-px-lg"
+                    @click="saveTravelPlan"
+                  />
+                </div>
+              </div>
+
+              <q-separator color="grey-8" class="q-mb-xl" />
+
+              <div class="travel-content q-pa-sm scroll-design">
+                <div v-html="formattedResponse" class="text-body1 line-height-2 content-text"></div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </transition>
+
+   <!-- Login Modal -->
+<q-dialog v-model="loginDialog" persistent seamless>
+  <q-card class="auth-modal login-modal">
+    <q-card-section class="q-pa-xl">
+      <div class="text-h4 text-weight-bold text-center q-mb-lg gradient-text">Giriş Yap</div>
+      
+      <q-input 
+        v-model="loginEmail" 
+        label="Email" 
+        type="email" 
+        outlined 
+        dark 
+        class="q-mb-md custom-input"
+        :input-style="{ color: 'white' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="mail" color="accent" />
+        </template>
+      </q-input>
+      
+      <q-input 
+        v-model="loginPassword" 
+        label="Şifre" 
+        type="password" 
+        outlined 
+        dark 
+        class="q-mb-lg custom-input"
+        :input-style="{ color: 'white' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="lock" color="accent" />
+        </template>
+      </q-input>
+      
+      <q-btn 
+        label="Giriş Yap" 
+        color="accent" 
+        class="full-width auth-submit-btn q-mb-md" 
+        @click="login" 
+        icon-right="login"
+      />
+      
+      <div class="text-center">
+        <q-btn 
+          flat 
+          label="Hesabın yok mu? Kayıt Ol" 
+          color="white" 
+          class="switch-auth-btn" 
+          @click="openRegister" 
+        />
+      </div>
+    </q-card-section>
+  </q-card>
+</q-dialog>
+
+<!-- Register Modal -->
+<q-dialog v-model="registerDialog" persistent seamless>
+  <q-card class="auth-modal register-modal">
+    <q-card-section class="q-pa-xl">
+      <div class="text-h4 text-weight-bold text-center q-mb-lg gradient-text">Kayıt Ol</div>
+      
+      <q-input 
+        v-model="registerName" 
+        label="İsim" 
+        outlined 
+        dark 
+        class="q-mb-md custom-input"
+        :input-style="{ color: 'white' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="person" color="positive" />
+        </template>
+      </q-input>
+      
+      <q-input 
+        v-model="registerEmail" 
+        label="Email" 
+        type="email" 
+        outlined 
+        dark 
+        class="q-mb-md custom-input"
+        :input-style="{ color: 'white' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="mail" color="positive" />
+        </template>
+      </q-input>
+      
+      <q-input 
+        v-model="registerPassword" 
+        label="Şifre" 
+        type="password" 
+        outlined 
+        dark 
+        class="q-mb-lg custom-input"
+        :input-style="{ color: 'white' }"
+      >
+        <template v-slot:prepend>
+          <q-icon name="lock" color="positive" />
+        </template>
+      </q-input>
+      
+
+      
+      <div class="text-center">
+        <q-btn 
+          flat 
+          label="Zaten hesabın var mı? Giriş Yap" 
+          color="white" 
+          class="switch-auth-btn" 
+          @click="openLogin" 
+        />
+      </div>
+    </q-card-section>
+  </q-card>
+</q-dialog>
+
+    <!-- Loading Dialog -->
+    <q-dialog v-model="isLoading" persistent seamless>
+      <q-card class="loading-card glass-effect" dark>
+        <q-card-section class="column items-center q-pa-xl">
+          <div class="plane-container q-mb-lg">
+            <q-icon name="flight" size="80px" class="text-accent flying-plane" />
+          </div>
+          <div class="text-h4 text-weight-bold text-accent q-mb-md">Seyahat Planı Hazırlanıyor</div>
+          <div class="text-h6 text-grey-4 text-center">
+            AI, sizin için özel seyahat rotanızı çiziyor...
+          </div>
+          <q-linear-progress 
+            dark 
+            rounded 
+            size="md" 
+            color="accent" 
+            class="q-mt-lg full-width"
+            indeterminate 
+          />
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+
+  </q-page>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+import axios from 'axios';
+import { useQuasar } from 'quasar';
+
+const $q = useQuasar();
+
+const queryText = ref('');
+const responseText = ref('');
+const isLoading = ref(false);
+
+// Auth
+const loginDialog = ref(false);
+const registerDialog = ref(false);
+const loginEmail = ref('');
+const loginPassword = ref('');
+const registerName = ref('');
+const registerEmail = ref('');
+const registerPassword = ref('');
+const token = ref(localStorage.getItem('token') || '');
+const isLoggedIn = computed(() => !!token.value);
+
+// Modallar
+const openLogin = () => { loginDialog.value = true; registerDialog.value = false; };
+const openRegister = () => { registerDialog.value = true; loginDialog.value = false; };
+
+// Gemini format
+const formattedResponse = computed(() => {
+  if (!responseText.value) return '';
+  return responseText.value
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-accent">$1</strong>')
+    .replace(/\*(.*?)\n/g, '<div class="q-pl-lg q-mb-sm"><span class="text-accent">▶</span> $1</div>')
+    .replace(/### (.*?)\n/g, '<h3 class="text-h5 text-weight-bold q-mt-xl q-mb-md text-white">$1</h3>')
+    .replace(/## (.*?)\n/g, '<h2 class="text-h4 text-weight-black q-mt-xl q-mb-lg text-gradient">$1</h2>')
+    .replace(/---/g, '<hr class="q-my-xl border-accent">');
+});
+
+// Travel Plan
+const getTravelPlan = async () => {
+  if (!queryText.value.trim()) return;
+
+  isLoading.value = true;
+  responseText.value = '';
+
+  try {
+    const response = await axios.post('/api/travel', { queryText: queryText.value });
+    responseText.value = response.data.plan;
+  } catch (err) {
+    console.error(err);
+    responseText.value = 'Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const clearResults = () => {
+  responseText.value = '';
+  queryText.value = '';
+};
+
+// Share
+const sharePlan = async () => {
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Seyahat Planım',
+        text: queryText.value,
+        url: window.location.href,
+      });
+    } else {
+      await navigator.clipboard.writeText(`${queryText.value}\n\n${responseText.value}`);
+      $q.notify({ message: 'Plan panoya kopyalandı!', color: 'accent', icon: 'content_copy' });
+    }
+  } catch {
+    $q.notify({ message: 'Paylaşım başarısız', color: 'negative', icon: 'error' });
+  }
+};
+
+// Save Plan
+const saveTravelPlan = async () => {
+  if (!isLoggedIn.value) {
+    openLogin();
+    $q.notify({ message: 'Lütfen giriş yapın', color: 'warning', icon: 'login' });
+    return;
+  }
+  try {
+    await axios.post('/api/travel/save', { token: token.value, queryText: queryText.value, plan: responseText.value });
+    $q.notify({ message: 'Plan kaydedildi', color: 'accent', icon: 'save' });
+  } catch {
+    $q.notify({ message: 'Plan kaydedilemedi', color: 'negative', icon: 'error' });
+  }
+};
+
+// Login
+const login = async () => {
+  try {
+    const res = await axios.post('/api/auth/login', { email: loginEmail.value, password: loginPassword.value });
+    token.value = res.data.token;
+    localStorage.setItem('token', token.value);
+    loginDialog.value = false;
+    $q.notify({ message: 'Giriş başarılı', color: 'accent', icon: 'login' });
+  } catch {
+    $q.notify({ message: 'Giriş başarısız', color: 'negative', icon: 'error' });
+  }
+};
+
+// Register
+const register = async () => {
+  try {
+    await axios.post('/api/auth/register', { name: registerName.value, email: registerEmail.value, password: registerPassword.value });
+    registerDialog.value = false;
+    openLogin();
+    $q.notify({ message: 'Kayıt başarılı, giriş yapabilirsiniz', color: 'accent', icon: 'check' });
+  } catch {
+    $q.notify({ message: 'Kayıt başarısız', color: 'negative', icon: 'error' });
+  }
+};
+</script>
+
+<style scoped>
+/* Mevcut tasarım stili aynen korunur. */
+.bg-dark { background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 50%, #0c0c0c 100%); }
+.text-gradient { background: linear-gradient(45deg, #ffffff, #00bcd4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.glass-effect { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+.search-card, .result-card, .loading-card { border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.custom-input :deep(.q-field__control) { border-radius: 12px; font-size: 1.1em; }
+.action-button { border-radius: 12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; transition:all 0.3s ease; }
+.action-button:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,188,212,0.3); }
+.travel-content { max-height: 70vh; overflow-y: auto; }
+.scroll-design::-webkit-scrollbar { width: 8px; }
+.scroll-design::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius:10px; }
+.scroll-design::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#00bcd4,#0097a7); border-radius:10px; }
+.line-height-2 { line-height: 1.8; }
+.content-text { font-size: 1.1em; }
+.glow-effect { filter: drop-shadow(0 0 20px rgba(0,188,212,0.5)); }
+.flying-plane { animation: fly 2s ease-in-out infinite alternate; }
+@keyframes fly { 0% { transform: translateY(0px) rotate(0deg); } 100% { transform: translateY(-10px) rotate(5deg); } }
+.plane-container { position: relative; }
+.plane-container::after { content:''; position:absolute; bottom:-10px; left:50%; transform:translateX(-50%); width:100px; height:4px; background:linear-gradient(90deg,transparent,#00bcd4,transparent); border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+.share-button { transition: all 0.3s ease; }
+.share-button:hover { transform: scale(1.05); }
+.gap-sm { gap:12px; }
+@media (min-width:1400px){ .col-lg-8{max-width:1200px;} .col-lg-10{max-width:1400px;} .travel-content{max-height:60vh;} }
+@media (max-width:1024px){ .q-pa-xl{padding:20px;} .search-card,.result-card{padding:30px!important;} }
+/* Modern Auth Butonları */
+.auth-btn {
+  border-radius: 12px;
+  padding: 12px 32px;
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  min-width: 140px;
+  margin: 0 8px;
+  margin-bottom: 5%;
+}
+
+.auth-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.7s ease;
+}
+
+.auth-btn:hover::before {
+  left: 100%;
+}
+
+.auth-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.auth-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* Giriş Yap Butonu */
+.login-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.login-btn:hover {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a42a0 100%);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Kayıt Ol Butonu */
+.register-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.register-btn:hover {
+  background: linear-gradient(135deg, #ee7df7 0%, #f4455c 100%);
+  border-color: rgba(255,255,255,0.3);
+}
+
+/* Butonlara ikon eklemek için (isteğe bağlı) */
+.login-btn::after {
+  content: '→';
+  margin-left: 8px;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.register-btn::after {
+  content: '+';
+  margin-left: 8px;
+  font-weight: bold;
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.auth-btn:hover::after {
+  transform: translateX(3px);
+}
+
+/* Responsive Tasarım */
+@media (max-width: 600px) {
+  .auth-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+    min-width: 120px;
+    margin: 4px;
+  }
+  
+  .row.gap-sm {
+    gap: 8px;
+  }
+}
+
+/* Loading durumu için */
+.auth-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.auth-btn.loading::after {
+  content: '...';
+  animation: loadingDots 1.5s infinite;
+}
+
+@keyframes loadingDots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+/* Focus durumu için */
+.auth-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.3);
+}
+/* Modern Auth Modal Stilleri */
+.auth-modal {
+  min-width: 400px;
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 25px 50px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+  background-size: 400% 400%;
+  animation: gradientShift 3s ease infinite;
+}
+
+.login-modal::before {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.register-modal::before {
+  background: linear-gradient(90deg, #f093fb, #f5576c);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f5576c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Özelleştirilmiş Input Alanları */
+.custom-input .q-field__control {
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.custom-input .q-field__control:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.custom-input .q-field__control:focus-within {
+  border-color: currentColor;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.custom-input .q-field__label {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 500;
+}
+
+/* Submit Butonları */
+.auth-submit-btn {
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.auth-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.7s ease;
+}
+
+.auth-submit-btn:hover::before {
+  left: 100%;
+}
+
+.auth-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Switch Auth Butonu */
+.switch-auth-btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.switch-auth-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.switch-auth-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.switch-auth-btn:hover::after {
+  width: 100%;
+}
+
+/* Responsive Tasarım */
+@media (max-width: 600px) {
+  .auth-modal {
+    min-width: 90vw;
+    margin: 20px;
+  }
+  
+  .q-pa-xl {
+    padding: 24px;
+  }
+  
+  .text-h4 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Loading Durumu */
+.auth-submit-btn.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.auth-submit-btn.loading .q-btn__content {
+  opacity: 0;
+}
+
+.auth-submit-btn.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
