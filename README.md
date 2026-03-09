@@ -1,0 +1,50 @@
+# SeyahatAI
+
+SeyahatAI, seyahat planlamayı kolaylaştıran ve yapay zekâ destekli öneriler sunan modern bir uygulamadır. Kullanıcıların seyahat rotalarını, konaklama seçeneklerini, ulaşım detaylarını ve gezilecek yerleri hızlı bir şekilde planlamasına yardımcı olur.
+
+---
+
+## 🚀 Özellikler
+
+- **Akıllı Rota Önerileri:** Yapay zekâ destekli algoritmalar sayesinde ziyaret etmek istediğiniz şehirleri en verimli şekilde sıralar.  
+- **Şehir ve Ülke Bilgileri:** Tarihi yerler, müzeler, restoranlar ve popüler noktalar hakkında detaylı bilgiler sağlar.  
+- **Kişiselleştirilmiş Planlama:** Kullanıcı tercihleri, bütçe ve zaman çerçevesine göre öneriler sunar.  
+- **Çoklu Durak Yönetimi:** Birden fazla şehir ve ülkeyi içeren seyahat planları oluşturabilirsiniz.  
+- **Mobil Uyumlu Arayüz:** Hem bilgisayar hem de mobil cihazlar için optimize edilmiş tasarım.  
+
+---
+
+## 📌 Kullanım
+
+1. Seyahat edilecek şehir ve ülkeleri seçin.  
+2. Seyahat tarihlerinizi ve bütçenizi girin.  
+3. SeyahatAI, size en uygun rota ve aktiviteleri önerir.  
+4. Planınızı kaydedin ve paylaşın.  
+
+---
+
+## 🛠 Teknolojiler
+
+- **Frontend:** Vue.js + Quasar Framework  
+- **Backend:** Node.js / Express (veya ihtiyaca göre)  
+- **Veritabanı:** MongoDB / SQL Server  
+- **Yapay Zekâ:** OpenAI API veya özel algoritmalar  
+
+---
+
+## 📂 Kurulum
+
+```bash
+# Depoyu klonlayın
+git clone https://github.com/KayraUsta/SeyahatAI.git
+
+# Proje dizinine girin
+cd SeyahatAI
+
+# Gerekli bağımlılıkları yükleyin (frontend)
+cd frontend
+npm install
+
+# Backend için
+cd ../backend
+npm install
