@@ -3,13 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Package files
+# Copy package files and quasar config (needed for postinstall script)
 COPY package*.json ./
+COPY quasar.config.js ./
 
-# Install dependencies
+# Install dependencies (postinstall runs 'quasar prepare' which needs quasar.config.js)
 RUN npm ci
 
-# Copy source code
+# Copy remaining source code
 COPY . .
 
 # Build the application
